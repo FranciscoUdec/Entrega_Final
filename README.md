@@ -19,17 +19,17 @@ dentro de una misma región y ruralidad?
 
 1. Descomprimir `data/raw/2025_Rendimiento_por_estudiante.rar` dentro de la
    misma carpeta `data/raw/` para obtener el archivo `.csv`.
-2. Abrir el proyecto en RStudio desde el archivo `rendimiento_escolar.Rproj`
+2. Abrir el proyecto en RStudio desde el archivo `Entrega_Final.Rproj`
    en la raíz del repositorio.
-3. Ejecutar `scripts/01_limpieza_variables.R`
-4. Ejecutar `scripts/02_descriptivo_graficos.R`
-5. Ejecutar `scripts/03_modelos.R`
+3. Ejecutar `scripts/Mine_mod.R`
+4. Ejecutar `scripts/Mine_grafico.R`
+5. Ejecutar `scripts/Mine_Limpio.R`
 6. Las salidas gráficas quedarán exportadas en `output/figuras/`.
 ## Estructura
 ```
 ├── data/
 │   └── raw/
-│       └── 2025_Rendimiento_por_estudiante.csv
+│       └── 2025_Rendimiento_por_estudiante.rar
 ├── output/
 │   └── figuras/
 ├── scripts/
