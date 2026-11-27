@@ -47,6 +47,7 @@ confirm file "data/processed/rendimiento_limpio.dta"
 capture mkdir "output"
 capture mkdir "output/logs"
 capture mkdir "output/tablas"
+capture mkdir "output/figuras"     // aquí guarda R los gráficos (03_graficos.R)
 
 log using "output/logs/02_modelos.log", replace text
 
@@ -80,7 +81,7 @@ matrix C = J(6, 5, .)
 * guardar_coef  fila  variable
 *   `1' = fila de la matriz C donde se guarda
 *   `2' = variable cuyo coeficiente se guarda (ej. publico)
-* Lee _b[] y _se[] de la ÚLTIMA regresión (S13S1, Bloque B2).
+* Lee _b[] y _se[] de la ÚLTIMA regresión.
 * Intervalo al 95 %: coeficiente +/- 1,96 errores estándar.
 capture program drop guardar_coef
 program guardar_coef
@@ -138,7 +139,7 @@ matrix colnames C = coef se ic_inf ic_sup n
 matrix rownames C = M1 M2 M3 M4 M5_mun M5_slep
 matrix list C, format(%9.4f)
 
-* A Excel (S13S2, Bloque E3): encabezados, la matriz desde D2 y los nombres
+* A Excel: encabezados, la matriz desde D2 y los nombres
 * de cada fila en las columnas A a C. Es el insumo del gráfico 3 en R.
 putexcel set "`salida'", replace
 putexcel A1 = ("modelo") B1 = ("descripcion") C1 = ("termino") ///
