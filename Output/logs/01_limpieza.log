@@ -1,0 +1,431 @@
+------------------------------------------------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  C:\Users\Camil\Downloads\Github\Entrega_Final\output/logs/01_limpieza.log
+  log type:  text
+ opened on:  26 Nov 2026, 22:28:41
+
+. 
+. * ------------------------------------------------------------------------------
+. * 1. Importar la base cruda
+. * ------------------------------------------------------------------------------
+. * El archivo viene separado por ";" y en UTF-8 .
+. import delimited "`raw_csv'", clear varnames(1) encoding("utf-8") delimiter(";")
+(38 vars, 3,540,980 obs)
+
+. rename *, lower
+  (all newnames==oldnames)
+
+. 
+. * Nos quedamos solo con las variables que usa el análisis.
+. keep rbd cod_reg_rbd cod_depe2 rural_rbd estado_estab cod_ense2 cod_grado ///
+>      gen_alu edad_alu sit_fin_r
+
+. 
+. * Registros en la base cruda
+. count
+  3,540,980
+
+. 
+. * EDAD_ALU trae 372 celdas con un espacio en blanco (" "): por eso Stata la
+. * puede leer como texto. destring con ignore(" ") la pasa a número y esas
+. * celdas quedan como missing. Si ya era numérica, destring
+. * solo avisa "already numeric" y no cambia nada.
+. destring edad_alu, replace ignore(" ")
+edad_alu: character space removed; replaced as byte
+(372 missing values generated)
+
+. 
+. * Situación final: los vacíos vienen como " "; strtrim quita los espacios.
+. replace sit_fin_r = strtrim(sit_fin_r)
+(6,264 real changes made)
+
+. tabulate sit_fin_r, missing
+
+  SIT_FIN_R |      Freq.     Percent        Cum.
+------------+-----------------------------------
+            |      6,264        0.18        0.18
+          P |  3,146,175       88.85       89.03
+          R |     75,585        2.13       91.16
+          T |    236,402        6.68       97.84
+          Y |     76,554        2.16      100.00
+------------+-----------------------------------
+      Total |  3,540,980      100.00
+
+. 
+. * ------------------------------------------------------------------------------
+. * 2. Filtros de la población objetivo
+. * ------------------------------------------------------------------------------
+. * Después de cada filtro, count muestra cuántos registros quedan.
+. * Para quedarse con varios códigos se botan los que NO son ninguno de ellos:
+. * drop if x != 1 & x != 2 & x != 5.
+. 
+. * 2.1 Establecimientos funcionando
+. keep if estado_estab == 1
+(653 observations deleted)
+
+. count
+  3,540,327
+
+. 
+. * 2.2 Municipal (1), Particular Subvencionado (2) y SLEP (5)
+. drop if cod_depe2 != 1 & cod_depe2 != 2 & cod_depe2 != 5
+(364,406 observations deleted)
+
+. count
+  3,175,921
+
+. 
+. * 2.3 Básica niños (2), Media HC jóvenes (5), Media TP/Artística jóvenes (7)
+. drop if cod_ense2 != 2 & cod_ense2 != 5 & cod_ense2 != 7
+(327,204 observations deleted)
+
+. count
+  2,848,717
+
+. 
+. * 2.4 Situación final: promovido, reprobado o retirado (sin trasladados)
+. drop if sit_fin_r != "P" & sit_fin_r != "R" & sit_fin_r != "Y"
+(198,525 observations deleted)
+
+. count
+  2,650,192
+
+. 
+. * 2.5 Sexo registral informado y edad no perdida
+. drop if gen_alu != 1 & gen_alu != 2
+(12 observations deleted)
+
+. drop if missing(edad_alu)
+(75 observations deleted)
+
+. count
+  2,650,105
+
+. 
+. * ------------------------------------------------------------------------------
+. * 3. Variables de análisis
+. * ------------------------------------------------------------------------------
+. 
+. * 3.1 Variable dependiente
+. *  aprueba        = 1 si promovido, 0 si reprobado (missing para retirados).
+. *  aprueba_amplia = 1 si promovido, 0 si reprobado o retirado (robustez).
+. generate aprueba = (sit_fin_r == "P") if sit_fin_r != "Y"
+(32,299 missing values generated)
+
+. generate aprueba_amplia = (sit_fin_r == "P")
+
+. label variable aprueba        "Promovido (1) vs. reprobado (0)"
+
+. label variable aprueba_amplia "Promovido (1) vs. reprobado o retirado (0)"
+
+. label define si_no 0 "No" 1 "Sí"
+
+. label values aprueba si_no
+
+. label values aprueba_amplia si_no
+
+. 
+. * 3.2 Dependencia administrativa
+. generate dependencia = .
+(2,650,105 missing values generated)
+
+. replace dependencia = 0 if cod_depe2 == 2
+(1,555,036 real changes made)
+
+. replace dependencia = 1 if cod_depe2 == 1
+(699,446 real changes made)
+
+. replace dependencia = 2 if cod_depe2 == 5
+(395,623 real changes made)
+
+. label define dependencia 0 "Particular subvencionado" 1 "Municipal" 2 "SLEP"
+
+. label values dependencia dependencia
+
+. label variable dependencia "Dependencia administrativa"
+
+. 
+. * Indicadora de establecimiento público (Municipal o SLEP): todo lo que no
+. * es particular subvencionado. dependencia no tiene missing después de los filtros.
+. generate publico = (dependencia != 0)
+
+. label define publico 0 "Particular subvencionado" 1 "Pública (Municipal + SLEP)"
+
+. label values publico publico
+
+. label variable publico "Establecimiento público (Municipal o SLEP)"
+
+. 
+. * Indicadoras de Municipal y SLEP por separado (para el modelo M5).
+. * La categoría base es particular subvencionado (las dos valen 0).
+. generate municipal = (dependencia == 1)
+
+. generate slep      = (dependencia == 2)
+
+. label variable municipal "Municipal"
+
+. label variable slep      "SLEP"
+
+. 
+. * 3.3 Territorio: región, ruralidad y su combinación (efecto fijo)
+. generate region = cod_reg_rbd
+
+. label define region ///
+>      1 "Tarapacá"            2 "Antofagasta"    3 "Atacama"      ///
+>      4 "Coquimbo"            5 "Valparaíso"     6 "O'Higgins"    ///
+>      7 "Maule"               8 "Biobío"         9 "Araucanía"    ///
+>     10 "Los Lagos"          11 "Aysén"         12 "Magallanes"   ///
+>     13 "Metropolitana"      14 "Los Ríos"      15 "Arica y Parinacota" ///
+>     16 "Ñuble"
+
+. label values region region
+
+. label variable region "Región del establecimiento"
+
+. 
+. generate rural = rural_rbd
+
+. label define rural 0 "Urbano" 1 "Rural"
+
+. label values rural rural
+
+. label variable rural "Zona del establecimiento"
+
+. 
+. * Celda región x zona: código de región x 10 + zona.
+. * Ej.: 130 = Metropolitana urbana, 131 = Metropolitana rural.
+. * Con i.reg_rural, cada celda tiene su propio efecto fijo en la regresión.
+. generate reg_rural = region * 10 + rural
+
+. label variable reg_rural "Celda región x ruralidad (región x 10 + zona)"
+
+. 
+. * 3.4 Características del estudiante y nivel
+. generate mujer = (gen_alu == 2)
+
+. label define mujer_lbl 0 "Hombre" 1 "Mujer"
+
+. label values mujer mujer_lbl
+
+. label variable mujer "Mujer"
+
+. 
+. rename edad_alu edad
+
+. label variable edad "Edad al 30 de junio"
+
+. 
+. * Nivel y grado: tipo de enseñanza x 10 + grado (ej. 21 = 1° básico)
+. generate nivel = cod_ense2 * 10 + cod_grado
+
+. label define nivel ///
+>     21 "1° básico"  22 "2° básico"  23 "3° básico"  24 "4° básico"  ///
+>     25 "5° básico"  26 "6° básico"  27 "7° básico"  28 "8° básico"  ///
+>     51 "1° medio HC" 52 "2° medio HC" 53 "3° medio HC" 54 "4° medio HC" ///
+>     71 "1° medio TP" 72 "2° medio TP" 73 "3° medio TP" 74 "4° medio TP"
+
+. label values nivel nivel
+
+. label variable nivel "Nivel y grado"
+
+. 
+. label variable rbd       "RBD del establecimiento"
+
+. label variable sit_fin_r "Situación final con indicador de traslado"
+
+. 
+. * ------------------------------------------------------------------------------
+. * 4. Revisión rápida
+. * ------------------------------------------------------------------------------
+. tabulate dependencia rural
+
+                      |       Zona del
+          Dependencia |    establecimiento
+       administrativa |    Urbano      Rural |     Total
+----------------------+----------------------+----------
+Particular subvencion | 1,491,111     63,925 | 1,555,036 
+            Municipal |   566,638    132,808 |   699,446 
+                 SLEP |   357,234     38,389 |   395,623 
+----------------------+----------------------+----------
+                Total | 2,414,983    235,122 | 2,650,105 
+
+. tabulate nivel
+
+    Nivel y |
+      grado |      Freq.     Percent        Cum.
+------------+-----------------------------------
+  1° básico |    197,280        7.44        7.44
+  2° básico |    202,847        7.65       15.10
+  3° básico |    215,909        8.15       23.25
+  4° básico |    230,067        8.68       31.93
+  5° básico |    233,739        8.82       40.75
+  6° básico |    224,992        8.49       49.24
+  7° básico |    232,837        8.79       58.02
+  8° básico |    239,511        9.04       67.06
+1° medio HC |    198,865        7.50       74.56
+2° medio HC |    189,588        7.15       81.72
+3° medio HC |    137,759        5.20       86.92
+4° medio HC |    129,247        4.88       91.79
+1° medio TP |     36,970        1.40       93.19
+2° medio TP |     35,428        1.34       94.53
+3° medio TP |     76,634        2.89       97.42
+4° medio TP |     68,432        2.58      100.00
+------------+-----------------------------------
+      Total |  2,650,105      100.00
+
+. tabstat aprueba aprueba_amplia, by(dependencia) stat(mean n)
+
+Summary statistics: Mean, N
+Group variable: dependencia (Dependencia administrativa)
+
+     dependencia |   aprueba  aprue~ia
+-----------------+--------------------
+Particular subve |  .9836186  .9745935
+                 |   1540768   1555036
+-----------------+--------------------
+       Municipal |    .97885  .9642088
+                 |    688984    699446
+-----------------+--------------------
+            SLEP |   .977382  .9586829
+                 |    388054    395623
+-----------------+--------------------
+           Total |   .981439  .9694774
+                 |   2617806   2650105
+--------------------------------------
+
+. tabstat aprueba, by(reg_rural) stat(mean n)
+
+Summary for variables: aprueba
+Group variable: reg_rural (Celda región x ruralidad (región x 10 + zona))
+
+reg_rural |      Mean         N
+----------+--------------------
+       10 |  .9797881     56056
+       11 |  .9902194     11758
+       20 |   .980325    103634
+       21 |  .9921977       769
+       30 |  .9784453     50337
+       31 |  .9729397      1626
+       40 |  .9835496    119146
+       41 |  .9937888     11592
+       50 |  .9831859    249552
+       51 |  .9924914     11853
+       60 |  .9840942    120208
+       61 |  .9875996     27741
+       70 |  .9800807    143278
+       71 |  .9880215     33727
+       80 |  .9839969    213334
+       81 |  .9908227     21466
+       90 |  .9812186    137210
+       91 |  .9841214     28277
+      100 |  .9769488    111404
+      101 |  .9852965     24960
+      110 |  .9737647     14713
+      111 |  .9737024      2890
+      120 |  .9858301     21595
+      121 |  .9895833       192
+      130 |  .9787693    890316
+      131 |   .986569     27846
+      140 |   .983144     49300
+      141 |   .987113     13502
+      150 |  .9859757     39289
+      151 |  .9939345      2473
+      160 |  .9841151     65345
+      161 |  .9912217     12417
+----------+--------------------
+    Total |   .981439   2617806
+-------------------------------
+
+. 
+. * ------------------------------------------------------------------------------
+. * 5. Guardar microdatos limpios
+. * ------------------------------------------------------------------------------
+. keep rbd region rural reg_rural dependencia publico municipal slep ///
+>      nivel mujer edad sit_fin_r aprueba aprueba_amplia
+
+. save "data/processed/rendimiento_limpio.dta", replace
+(file data/processed/rendimiento_limpio.dta not found)
+file data/processed/rendimiento_limpio.dta saved
+
+. 
+. * ------------------------------------------------------------------------------
+. * 6. Tabla agregada para los gráficos en R
+. * ------------------------------------------------------------------------------
+. * collapse: una fila por región x zona x dependencia.
+. * preserve/restore: la base de estudiantes vuelve intacta después.
+. preserve
+
+. collapse (mean)  tasa_aprob = aprueba tasa_aprob_amplia = aprueba_amplia ///
+>          (count) n_eval = aprueba n_total = aprueba_amplia,              ///
+>          by(region rural dependencia)
+
+. 
+. * Nombres en texto, para que R no tenga que volver a escribir las etiquetas.
+. decode region,      generate(region_nombre)
+
+. decode rural,       generate(zona)
+
+. decode dependencia, generate(dependencia_nombre)
+
+. list in 1/5
+
+     +-----------------------------------------------------------------------------------------------------------+
+  1. |              dependencia |   region |  rural | tasa_a~b | tasa_a~a | n_eval | n_total | region~e |   zona |
+     | Particular subvencionado | Tarapacá | Urbano | .9840746 | .9658933 |  39685 |   40432 | Tarapacá | Urbano |
+     |-----------------------------------------------------------------------------------------------------------|
+     |                                               dependencia_nombre                                          |
+     |                                         Particular subvencionado                                          |
+     +-----------------------------------------------------------------------------------------------------------+
+
+     +-----------------------------------------------------------------------------------------------------------+
+  2. |              dependencia |   region |  rural | tasa_a~b | tasa_a~a | n_eval | n_total | region~e |   zona |
+     |                     SLEP | Tarapacá | Urbano | .9693971 | .9330903 |  16371 |   17008 | Tarapacá | Urbano |
+     |-----------------------------------------------------------------------------------------------------------|
+     |                                               dependencia_nombre                                          |
+     |                                                             SLEP                                          |
+     +-----------------------------------------------------------------------------------------------------------+
+
+     +-----------------------------------------------------------------------------------------------------------+
+  3. |              dependencia |   region |  rural | tasa_a~b | tasa_a~a | n_eval | n_total | region~e |   zona |
+     | Particular subvencionado | Tarapacá |  Rural | .9907407 | .9855517 |   5508 |    5537 | Tarapacá |  Rural |
+     |-----------------------------------------------------------------------------------------------------------|
+     |                                               dependencia_nombre                                          |
+     |                                         Particular subvencionado                                          |
+     +-----------------------------------------------------------------------------------------------------------+
+
+     +-----------------------------------------------------------------------------------------------------------+
+  4. |              dependencia |   region |  rural | tasa_a~b | tasa_a~a | n_eval | n_total | region~e |   zona |
+     |                Municipal | Tarapacá |  Rural | .9900017 | .9732962 |   6001 |    6104 | Tarapacá |  Rural |
+     |-----------------------------------------------------------------------------------------------------------|
+     |                                               dependencia_nombre                                          |
+     |                                                        Municipal                                          |
+     +-----------------------------------------------------------------------------------------------------------+
+
+     +-----------------------------------------------------------------------------------------------------------+
+  5. |              dependencia |   region |  rural | tasa_a~b | tasa_a~a | n_eval | n_total | region~e |   zona |
+     |                     SLEP | Tarapacá |  Rural | .9839357 | .9533074 |    249 |     257 | Tarapacá |  Rural |
+     |-----------------------------------------------------------------------------------------------------------|
+     |                                               dependencia_nombre                                          |
+     |                                                             SLEP                                          |
+     +-----------------------------------------------------------------------------------------------------------+
+
+. 
+. * nolabel: exporta los códigos (0, 1, 2) y no las etiquetas.
+. export excel using "data/processed/tasas_region_rural_dependencia.xlsx", ///
+>     firstrow(variables) nolabel replace
+file data/processed/tasas_region_rural_dependencia.xlsx saved
+
+. restore
+
+. 
+. * Estudiantes en la muestra limpia
+. count
+  2,650,105
+
+. 
+. log close
+      name:  <unnamed>
+       log:  C:\Users\Camil\Downloads\Github\Entrega_Final\output/logs/01_limpieza.log
+  log type:  text
+ closed on:  26 Nov 2026, 22:29:30
+------------------------------------------------------------------------------------------------------------------------------
