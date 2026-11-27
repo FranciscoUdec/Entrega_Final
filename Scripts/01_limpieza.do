@@ -4,30 +4,6 @@
 *            subvencionada (Entrega Final, Fundamentos de la programación
 *            para análisis económico)
 * Autores  : Francisco Inostroza y Sebastián Navarrete
-* Software : Stata 14 o superior
-*
-* Qué hace :
-*   1. Importa la base cruda de Rendimiento por Estudiante 2025 (MINEDUC)
-*      desde data/raw/ (el CSV que sale del .rar original).
-*   2. Filtra la población objetivo:
-*        - establecimientos funcionando              (ESTADO_ESTAB = 1)
-*        - dependencia municipal, part. subv. o SLEP (COD_DEPE2 = 1, 2, 5)
-*        - educación regular de niños y jóvenes      (COD_ENSE2 = 2, 5, 7)
-*        - situación final promovido, reprobado o retirado (SIT_FIN_R = P, R, Y);
-*          se excluyen los trasladados (T): su situación final se registra
-*          en el establecimiento de destino.
-*        - sexo registral informado y edad no perdida.
-*   3. Crea las variables de análisis (aprueba, publico, dependencia, rural,
-*      region, reg_rural, nivel, mujer, edad).
-*   4. Guarda:
-*        - data/processed/rendimiento_limpio.dta             (microdatos limpios)
-*        - data/processed/tasas_region_rural_dependencia.xlsx (tasas agregadas,
-*          insumo de los gráficos en R)
-*
-* Cómo correrlo: con el directorio de trabajo en la raíz del repositorio
-* (la carpeta donde está Entrega_Final.Rproj):
-*     cd "ruta/a/Entrega_Final"
-*     do scripts/01_limpieza.do
 * ==============================================================================
 
 version 14
@@ -56,7 +32,7 @@ log using "output/logs/01_limpieza.log", replace text
 * ------------------------------------------------------------------------------
 * 1. Importar la base cruda
 * ------------------------------------------------------------------------------
-* El archivo viene separado por ";" y en UTF-8 (S12S1, la ENE).
+* El archivo viene separado por ";" y en UTF-8 .
 import delimited "`raw_csv'", clear varnames(1) encoding("utf-8") delimiter(";")
 rename *, lower
 
@@ -69,7 +45,7 @@ count
 
 * EDAD_ALU trae 372 celdas con un espacio en blanco (" "): por eso Stata la
 * puede leer como texto. destring con ignore(" ") la pasa a número y esas
-* celdas quedan como missing (S12S1, Bloque E3). Si ya era numérica, destring
+* celdas quedan como missing. Si ya era numérica, destring
 * solo avisa "already numeric" y no cambia nada.
 destring edad_alu, replace ignore(" ")
 
@@ -82,7 +58,7 @@ tabulate sit_fin_r, missing
 * ------------------------------------------------------------------------------
 * Después de cada filtro, count muestra cuántos registros quedan.
 * Para quedarse con varios códigos se botan los que NO son ninguno de ellos:
-* drop if x != 1 & x != 2 & x != 5   (solo != y &, vistos en S12).
+* drop if x != 1 & x != 2 & x != 5.
 
 * 2.1 Establecimientos funcionando
 keep if estado_estab == 1
@@ -206,7 +182,7 @@ save "data/processed/rendimiento_limpio.dta", replace
 * ------------------------------------------------------------------------------
 * 6. Tabla agregada para los gráficos en R
 * ------------------------------------------------------------------------------
-* collapse: una fila por región x zona x dependencia (S12S2, Bloque G2).
+* collapse: una fila por región x zona x dependencia.
 * preserve/restore: la base de estudiantes vuelve intacta después.
 preserve
 collapse (mean)  tasa_aprob = aprueba tasa_aprob_amplia = aprueba_amplia ///
@@ -219,7 +195,7 @@ decode rural,       generate(zona)
 decode dependencia, generate(dependencia_nombre)
 list in 1/5
 
-* nolabel: exporta los códigos (0, 1, 2) y no las etiquetas (S12S1, Bloque E2).
+* nolabel: exporta los códigos (0, 1, 2) y no las etiquetas.
 export excel using "data/processed/tasas_region_rural_dependencia.xlsx", ///
     firstrow(variables) nolabel replace
 restore
