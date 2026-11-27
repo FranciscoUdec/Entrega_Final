@@ -3,32 +3,6 @@
 * Proyecto : Rendimiento escolar 2025 - Educación pública vs. particular
 *            subvencionada
 * Autores  : Francisco Inostroza y Sebastián Navarrete
-* Software : Stata 14 o superior
-* Requiere : haber corrido scripts/01_limpieza.do
-*
-* Pregunta : ¿Los estudiantes de establecimientos públicos (Municipal + SLEP)
-*            tienen menor probabilidad de aprobar que los de particulares
-*            subvencionados, comparando dentro de una misma región y zona
-*            (urbana/rural)?
-*
-* Modelos de probabilidad lineal (regress):
-*   M1  aprueba ~ publico                                  (sin controles)
-*   M2  aprueba ~ publico + EF región x ruralidad
-*   M3  M2 + mujer + edad + EF de nivel/grado              (principal)
-*   M4  M3 con aprueba_amplia (retirados = no aprueba)     (robustez)
-*   M5  M3 separando Municipal y SLEP                      (heterogeneidad)
-*
-* No se usan PROM_GRAL ni ASISTENCIA como controles: son parte del criterio
-* de promoción (resultado), no características previas del estudiante.
-*
-* Limitación: los errores estándar suponen que cada estudiante es
-* independiente, pero los alumnos de un mismo colegio se parecen entre sí.
-* Por eso los errores estándar (y los intervalos del gráfico 3) probablemente
-* son más chicos de lo que deberían: hay que leerlos con cautela.
-*
-* Salidas:
-*   output/logs/02_modelos.log        salida completa de Stata
-*   output/tablas/coef_publico.xlsx   coeficientes de interés (insumo de R)
 * ==============================================================================
 
 version 14
