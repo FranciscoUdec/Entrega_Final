@@ -3,16 +3,6 @@
 # Proyecto : Rendimiento escolar 2025 - Educación pública vs. particular
 #            subvencionada
 # Autores  : Francisco Inostroza y Sebastián Navarrete
-# Requiere : haber corrido scripts/01_limpieza.do y scripts/02_modelos.do
-#
-# Qué hace : Gráficos en ggplot2 a partir de las salidas de Stata:
-#   - data/processed/tasas_region_rural_dependencia.xlsx  (01_limpieza.do)
-#   - output/tablas/coef_publico.xlsx                     (02_modelos.do)
-#
-# Salidas (output/figuras/):
-#   fig1_tasas_region_zona.png   tasa de aprobación por región, zona y dependencia
-#   fig2_brecha_region_zona.png  brecha pública - particular subv. (puntos porcentuales)
-#   fig3_coeficientes.png        efecto estimado de "pública" en cada modelo
 # ==============================================================================
 
 # install.packages(c("readxl", "dplyr", "ggplot2"))   # solo la primera vez
