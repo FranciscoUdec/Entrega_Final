@@ -17,27 +17,37 @@ dentro de una misma región y ruralidad?
 
 ## Cómo correrlo
 
-1. Descomprimir `data/raw/2025_Rendimiento_por_estudiante.rar` dentro de la
-   misma carpeta `data/raw/` para obtener el archivo `.csv`.
-2. Abrir el proyecto en RStudio desde el archivo `Entrega_Final.Rproj`
-   en la raíz del repositorio.
-3. Ejecutar `scripts/Mine_mod.R`
-4. Ejecutar `scripts/Mine_grafico.R`
-5. Ejecutar `scripts/Mine_Limpio.R`
-6. Las salidas gráficas quedarán exportadas en `output/figuras/`.
+1. **R** — abrir `Entrega_Final.Rproj` en RStudio y correr
+   `scripts/00_descomprimir.R`. Extrae el CSV dentro de `data/raw/`.
+   (Alternativa: descomprimir el `.rar` a mano con 7-Zip o WinRAR en `data/raw/`.)
+2. **Stata** — `cd` a la raíz del repositorio y correr:
+   ```stata
+   do scripts/01_limpieza.do
+   do scripts/02_modelos.do
+   ```
+3. **R** — correr `scripts/03_graficos.R`.
+
+4. Las salidas gráficas quedarán exportadas en `output/figuras/`.
+
 ## Estructura
 ```
 ├── data/
-│   └── raw/
-│       └── 2025_Rendimiento_por_estudiante.rar
-├── output/
-│   └── figuras/
+│   ├── raw/
+│   │   └── Rendimiento-por-estudiante-2025.rar    # original, sin editar
+│   └── processed/                                  # generado por 01_limpieza.do
+│       ├── rendimiento_limpio.dta                  # (no se sube: se regenera)
+│       └── tasas_region_rural_dependencia.xlsx
 ├── scripts/
-│   ├── 01_limpieza_variables.R
-│   ├── 02_descriptivo_graficos.R
-│   └── 03_modelos.R
+│   ├── 00_descomprimir.R
+│   ├── 01_limpieza.do
+│   ├── 02_modelos.do
+│   └── 03_graficos.R
+├── output/
+│   ├── logs/        # 01_limpieza.log, 02_modelos.log
+│   ├── tablas/      # coef_publico.xlsx
+│   └── figuras/     # fig1, fig2, fig3 (.png)
+├── Hito01.pdf
 ├── README.md
-├── Hito_01.pdf
 └── Entrega_Final.Rproj
 ```
 
